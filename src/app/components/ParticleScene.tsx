@@ -36,30 +36,38 @@ const ParticleMorph = ({modelA, modelB, count = 10000, offsetA = 0, offsetB = 0}
       let mesh: THREE.Mesh | null = null
       scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) mesh = child as THREE.Mesh
-      })
-      if (!mesh) return
 
-      // モデル中心を計算
-      const box = new THREE.Box3().setFromObject(mesh)
-      const center = new THREE.Vector3()
-      box.getCenter(center)
+        if (!mesh) return
 
-      const sampler = new MeshSurfaceSampler(mesh).build()
-      const tempPos = new THREE.Vector3()
-      const tempColor = new THREE.Color()
+        if (mesh instanceof THREE.Mesh) {
+          const material = mesh.material
 
-      for (let i = 0; i < count; i++) {
-        sampler.sample(tempPos, undefined, tempColor)
-        posArray[i * 3 + 0] = tempPos.x - center.x
-        posArray[i * 3 + 1] = tempPos.y - center.y
-        posArray[i * 3 + 2] = tempPos.z - center.z
+          // ここで material が使える
+          // モデル中心を計算
+          const box = new THREE.Box3().setFromObject(mesh)
+          const center = new THREE.Vector3()
+          box.getCenter(center)
 
-        if (isFirst) {
-          colors[i * 3 + 0] = tempColor.r
-          colors[i * 3 + 1] = tempColor.g
-          colors[i * 3 + 2] = tempColor.b
+          const sampler = new MeshSurfaceSampler(mesh).build()
+          const tempPos = new THREE.Vector3()
+          const tempColor = new THREE.Color()
+
+          const materialColor = (material as THREE.MeshStandardMaterial)?.color ?? new THREE.Color(1, 1, 1)
+
+          for (let i = 0; i < count; i++) {
+            sampler.sample(tempPos, undefined, tempColor)
+            posArray[i * 3 + 0] = tempPos.x - center.x
+            posArray[i * 3 + 1] = tempPos.y - center.y
+            posArray[i * 3 + 2] = tempPos.z - center.z
+
+            if (isFirst) {
+              colors[i * 3 + 0] = materialColor.r
+              colors[i * 3 + 1] = materialColor.g
+              colors[i * 3 + 2] = materialColor.b
+            }
+          }
         }
-      }
+      })
     }
 
     sampleMesh(nodesA.Scene || nodesA, posA, true)
@@ -96,6 +104,7 @@ const ParticleMorph = ({modelA, modelB, count = 10000, offsetA = 0, offsetB = 0}
       <shaderMaterial
         ref={materialRef}
         uniforms={uniforms}
+        vertexColors
         vertexShader={`
     varying vec3 vColor;
     uniform float uProgress;
@@ -136,10 +145,10 @@ function MainScene({modelA, modelB}: {modelA: string; modelB: string}) {
   return (
     <>
       {/* 中心に赤い球とAxesHelper */}
-      <mesh position={[0, 0, 0]}>
+      {/* <mesh position={[0, 0, 0]}>
         <sphereGeometry args={[0.1, 16, 16]} />
         <meshBasicMaterial color="red" />
-      </mesh>
+      </mesh> */}
       <primitive object={new THREE.AxesHelper(2)} />
 
       <ParticleMorph
