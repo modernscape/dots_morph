@@ -12,9 +12,11 @@ interface ParticleMorphProps {
   modelA: string
   modelB: string
   count?: number
+  offsetA?: number
+  offsetB?: number
 }
 
-const ParticleMorph = ({modelA, modelB, count = 10000}: ParticleMorphProps) => {
+const ParticleMorph = ({modelA, modelB, count = 10000, offsetA = 0, offsetB = 0}: ParticleMorphProps) => {
   const meshRef = useRef<THREE.Points>(null!)
   const materialRef = useRef<THREE.ShaderMaterial>(null!)
 
@@ -66,7 +68,16 @@ const ParticleMorph = ({modelA, modelB, count = 10000}: ParticleMorphProps) => {
     return {posA, posB, colors}
   }, [nodesA, nodesB, count])
 
-  const uniforms = useMemo(() => ({uProgress: {value: 0}}), [])
+  // const uniforms = useMemo(() => ({uProgress: {value: 0}}), [])
+
+  const uniforms = useMemo(
+    () => ({
+      uProgress: {value: 0},
+      uOffsetA: {value: -2.0},
+      uOffsetB: {value: 2.0},
+    }),
+    [],
+  )
 
   useFrame((state) => {
     if (materialRef.current) {
@@ -77,34 +88,43 @@ const ParticleMorph = ({modelA, modelB, count = 10000}: ParticleMorphProps) => {
   return (
     <points ref={meshRef} position={[0, 0, 0]}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={count} array={particles.posA} itemSize={3} />
-        <bufferAttribute attach="attributes-target" count={count} array={particles.posB} itemSize={3} />
-        <bufferAttribute attach="attributes-color" count={count} array={particles.colors} itemSize={3} />
+        <bufferAttribute attach="attributes-position" args={[particles.posA, 3]} />
+        <bufferAttribute attach="attributes-target" args={[particles.posB, 3]} />
+        <bufferAttribute attach="attributes-color" args={[particles.colors, 3]} />
       </bufferGeometry>
+
       <shaderMaterial
         ref={materialRef}
-        vertexColors
-        transparent
         uniforms={uniforms}
         vertexShader={`
-          varying vec3 vColor;
-          uniform float uProgress;
-          attribute vec3 target;
-          void main() {
-            vColor = color;
-            vec3 pos = mix(position, target, uProgress);
-            vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-            gl_PointSize = 3.0 * (1.0 / -mvPosition.z);
-            gl_Position = projectionMatrix * mvPosition;
-          }
-        `}
+    varying vec3 vColor;
+    uniform float uProgress;
+    uniform float uOffsetA;
+    uniform float uOffsetB;
+    attribute vec3 target;
+
+    void main() {
+      vColor = color;
+
+      vec3 posA = position + vec3(uOffsetA, 0.0, 0.0);
+      vec3 posB = target   + vec3(uOffsetB, 0.0, 0.0);
+
+      vec3 pos = mix(posA, posB, uProgress);
+
+      vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+      gl_PointSize = 3.0 * (1.0 / -mvPosition.z);
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `}
         fragmentShader={`
-          varying vec3 vColor;
-          void main() {
-            if (length(gl_PointCoord - vec2(0.5)) > 0.5) discard;
-            gl_FragColor = vec4(vColor, 1.0);
-          }
-        `}
+    varying vec3 vColor;
+    void main() {
+      if (length(gl_PointCoord - vec2(0.5)) > 0.5) discard;
+      gl_FragColor = vec4(vColor, 1.0);
+    }
+  `}
+        vertexColors
+        transparent
       />
     </points>
   )
@@ -112,6 +132,7 @@ const ParticleMorph = ({modelA, modelB, count = 10000}: ParticleMorphProps) => {
 
 // ---------------------- MainScene ----------------------
 function MainScene({modelA, modelB}: {modelA: string; modelB: string}) {
+  const distance = 4 // モデル間の距離
   return (
     <>
       {/* 中心に赤い球とAxesHelper */}
@@ -121,7 +142,12 @@ function MainScene({modelA, modelB}: {modelA: string; modelB: string}) {
       </mesh>
       <primitive object={new THREE.AxesHelper(2)} />
 
-      <ParticleMorph modelA={modelA} modelB={modelB} />
+      <ParticleMorph
+        modelA={modelA}
+        modelB={modelB}
+        offsetA={-distance / 2} // 左側に移動
+        offsetB={distance / 2}
+      />
     </>
   )
 }
