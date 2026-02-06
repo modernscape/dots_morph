@@ -132,7 +132,6 @@ const ParticleMorph = ({modelA, modelB, count = 10000, offsetA = 0, offsetB = 0}
       gl_FragColor = vec4(vColor, 1.0);
     }
   `}
-        vertexColors
         transparent
       />
     </points>
