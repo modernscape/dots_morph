@@ -144,7 +144,7 @@ export default function ParticleScene() {
     <div style={{width: "100vw", height: "100vh", background: "#000"}}>
       <Canvas camera={{position: [0, 0, 5]}}>
         <ambientLight intensity={0.5} />
-        <ParticleMorph modelA="/model1.glb" modelB="/model2.glb" />
+        <ParticleMorph modelA="/24-11-10_sphere.glb" modelB="/24-11-15_torus2.glb" />
       </Canvas>
     </div>
   )
